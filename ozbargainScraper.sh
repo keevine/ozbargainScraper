@@ -8,9 +8,12 @@ then
 fi
 
 webDataFile="ozbargainData.html"    # Stores the html for the website
-nodesFile="nodesFile.html"          # Stores the data for each individual post 
+emailFile="emailFile.txt"          # Stores the data for each individual post 
 
-> $nodesFile                        
+date=$(date +%d-%b-%g)
+time=$(date +%R%p)
+
+echo -e "Subject:Ozbargain digest for $date $time\n\n"> $emailFile                        
 
 # Extract html from ozbargain websiteq
 curl -s https://www.ozbargain.com.au/deals > "$webDataFile"
@@ -36,11 +39,11 @@ done
 numMatches=0
 while read line 
 do 
-    # Ignore the sidebar info to speed up process
+    # Stop looping when reaching the sidebar info to speed up process
     sidebar=`echo $line | egrep "<ul class=\"ozblist\">"`
     if [ "$sidebar" != "" ]
     then
-        echo "stopping..."
+        echo "Finished searching."
         break
     fi
 
@@ -62,8 +65,10 @@ do
     if [ "$match" != "" ]
     then 
         numMatches=$((numMatches+1))
-        echo "$match" >> $nodesFile
+        echo -e "$match\n" >> $emailFile
     fi
 done < "$webDataFile"
 
-echo "Exiting program with $numMatches matching posts found."
+echo "Sending email to $email with $numMatches matching posts found."
+
+cat emailFile.txt | sendmail $email
