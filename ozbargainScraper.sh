@@ -1,22 +1,25 @@
-#!/bin/sh
+#!/bin/bash
 
 # Usage
-if [ "$#" -eq 0 ]
+if [ "$#" -lt 2 ]
 then
-    echo "Usage: $0 [searchTerms...]"
+    echo "Usage: $0 <email@domain.com> [searchTerms...]"
     exit 1
 fi
 
-webDataFile="ozbargainData.html"
+webDataFile="ozbargainData.html"    # Stores the html for the website
+nodesFile="nodesFile.html"          # Stores the data for each individual post 
 
-> temp.html
+> $nodesFile                        
 
 # Extract html from ozbargain websiteq
 curl -s https://www.ozbargain.com.au/deals > "$webDataFile"
 
-# Construct the search term with matching given keywords
-firstSearchTerm=$1
-shift
+email=$1
+
+# Construct the search regex with matching given keywords
+firstSearchTerm=$2
+shift 2
 
 regex="class=\"title\" id=.* data-title=\".*$firstSearchTerm.*\""
 echo "Searching ozBargain webpage for the given input search terms:"
@@ -41,17 +44,26 @@ do
         break
     fi
 
-    # Search for matches 
+    # Search for matches and format output 
     match=`echo "$line" | egrep -i "$regex"`
+
+    # Ignore posts which have already expired
+    if [[ "$match" == *"class=\"tagger expired\""* ]]
+    then
+        continue
+    fi
+
+    # Extract the relevant data: Title, link, price
+    match=`echo "$match" | sed s/^.*data-title=\"//`
+    match=`echo "$match" | sed s/"\"><a href=\""/" https\:\/\/www\.ozbargain\.com\.au"/`
+    #match=$(echo "$match" | sed "s/\">[-a-zA-Z0-9 \'\"!@#$%^&*()\[\=\+\`\~,\.\?\/]*<em class=\"dollar\">/ /")
+    match=$(echo "$match" | sed "s/\">.*<em class=\"dollar\">/ /")
+    match=$(echo "$match" | sed "s/<\/em\>.*$//")
     if [ "$match" != "" ]
     then 
         numMatches=$((numMatches+1))
-        echo "$match" >> temp.html
-        node=`echo "$match" | grep -P "href=\"\/node\/([0-9]+)\"" -o | sed -E "s/href=\"\/node\/|\"$//g"`
+        echo "$match" >> $nodesFile
     fi
 done < "$webDataFile"
 
 echo "Exiting program with $numMatches matching posts found."
-
-#echo $node
-#echo $data > temp.html
