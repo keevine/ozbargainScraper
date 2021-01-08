@@ -8,7 +8,7 @@ then
 fi
 
 webDataFile="ozbargainData.html"    # Stores the html for the website
-emailFile="emailFile.txt"          # Stores the data for each individual post 
+emailFile="emailFile.txt"           # Stores the posts to be later sent via email
 
 date=$(date +%d-%b-%g)
 time=$(date +%R%p)
@@ -26,13 +26,17 @@ shift 2
 
 regex="class=\"title\" id=.* data-title=\".*$firstSearchTerm.*\""
 echo "Searching ozBargain webpage for the given input search terms:"
+echo "Here are the ozBargain posts found for the following search terms:" >> $emailFile
 echo "$firstSearchTerm"
+echo "$firstSearchTerm" >> $emailFile
 for searchTerm in "$@"
 do  
     echo "$searchTerm"
+    echo "$searchTerm" >> $emailFile
     regex=$regex"|class=\"title\" id=.* data-title=\".*$searchTerm.*\""
-    # echo $regex
 done
+
+echo -e "\n" >> $emailFile
 
 
 # Loop through ozbargain web data to find matching terms
@@ -59,7 +63,6 @@ do
     # Extract the relevant data: Title, link, price
     match=`echo "$match" | sed s/^.*data-title=\"//`
     match=`echo "$match" | sed s/"\"><a href=\""/" https\:\/\/www\.ozbargain\.com\.au"/`
-    #match=$(echo "$match" | sed "s/\">[-a-zA-Z0-9 \'\"!@#$%^&*()\[\=\+\`\~,\.\?\/]*<em class=\"dollar\">/ /")
     match=$(echo "$match" | sed "s/\">.*<em class=\"dollar\">/ /")
     match=$(echo "$match" | sed "s/<\/em\>.*$//")
     if [ "$match" != "" ]
@@ -69,6 +72,10 @@ do
     fi
 done < "$webDataFile"
 
-echo "Sending email to $email with $numMatches matching posts found."
+# Send an email if matches were found
+if [ $numMatches -ne 0 ]
+then
+    echo "Sending email to $email with $numMatches matching posts found."
 
-cat emailFile.txt | sendmail $email
+    cat emailFile.txt | sendmail $email
+fi
