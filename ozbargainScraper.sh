@@ -77,5 +77,6 @@ if [ $numMatches -ne 0 ]
 then
     echo "Sending email to $email with $numMatches matching posts found."
 
+    echo -e "\nIf you wish to unsubscribe or find any bugs or would like to request a feature to be implemented, please contact: ozbargainScraper@gmail.com\n" >> $emailFile
     cat emailFile.txt | sendmail $email
 fi
