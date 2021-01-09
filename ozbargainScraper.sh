@@ -6,9 +6,15 @@ then
     echo "Usage: $0 <email@domain.com> [searchTerms...]"
     exit 1
 fi
+email=$1
+
+mkdir -p ".ozBargainLogs"
 
 webDataFile="ozbargainData.html"    # Stores the html for the website
 emailFile="emailFile.txt"           # Stores the posts to be later sent via email
+userLogs=".ozBargainLogs/$email"
+
+touch "$userLogs"
 
 date=$(date +%d-%b-%g)
 time=$(date +%R%p)
@@ -18,7 +24,6 @@ echo -e "Subject:Ozbargain digest for $date $time\n\n"> $emailFile
 # Extract html from ozbargain websiteq
 curl -s https://www.ozbargain.com.au/deals > "$webDataFile"
 
-email=$1
 
 # Construct the search regex with matching given keywords
 firstSearchTerm=$2
@@ -65,10 +70,19 @@ do
     match=`echo "$match" | sed s/"\"><a href=\""/" https\:\/\/www\.ozbargain\.com\.au"/`
     match=$(echo "$match" | sed "s/\">.*<em class=\"dollar\">/ /")
     match=$(echo "$match" | sed "s/<\/em\>.*$//")
+
+    # Check user logs to see if the user has already been sent the post
+    # This is to prevent sending the user the same post in multiple emails 
+    if grep -Fxq "$match" "$userLogs"
+    then
+        continue
+    fi
+
     if [ "$match" != "" ]
     then 
         numMatches=$((numMatches+1))
         echo -e "$match\n" >> $emailFile
+        echo -e "$match\n" >> $userLogs
     fi
 done < "$webDataFile"
 
